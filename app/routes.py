@@ -15,8 +15,41 @@ import os
 main = Blueprint('main', __name__)
 
 
-model_path = os.path.join(os.path.dirname(__file__), '../model/rf.pkl')
-model = joblib.load(model_path)
+# model_path = os.path.join(os.path.dirname(__file__), '../model/rf.pkl')
+# model = joblib.load(model_path)
+
+# model_path = os.path.join(os.path.dirname(__file__), '../model/rf.pkl')
+dosha_model_path = os.path.join(os.path.dirname(__file__), '../model/Dosha/Dosha_Prediction_Model.pkl')
+risk_model_path = os.path.join(os.path.dirname(__file__), '../model/Risk/Risk_Prediction_Model.pkl')
+medicine_model_path = os.path.join(os.path.dirname(__file__), '../model/Medicine/Medicine_Prediction_Model.pkl')
+
+# Load models
+# model = joblib.load(model_path)
+dosha_model = joblib.load(dosha_model_path)
+risk_model = joblib.load(risk_model_path)
+medicine_model = joblib.load(medicine_model_path)
+
+# Construct encoder paths
+dosha_encoder_path = os.path.join(os.path.dirname(__file__), '../model/Dosha/Dosha_LabelEncoder.pkl')
+risk_encoder_path = os.path.join(os.path.dirname(__file__), '../model/Risk/Risk_LabelEncoder.pkl')
+medicine_encoder_path = os.path.join(os.path.dirname(__file__), '../model/Medicine/Medicine_LabelEncoder.pkl')
+
+# Load encoders if needed
+dosha_encoder = joblib.load(dosha_encoder_path)
+risk_encoder = joblib.load(risk_encoder_path)
+medicine_encoder = joblib.load(medicine_encoder_path)
+
+
+
+# model = joblib.load('model/rf.pkl')
+# dosha_model = joblib.load('model/Dosha/Dosha_Prediction_Model.pkl')
+# risk_model = joblib.load('model/Risk/Risk_Prediction_Model.pkl')
+# medicine_model = joblib.load('model/Medicine/Medicine_Prediction_Model.pkl')
+
+# # Load encoders if needed 
+# dosha_encoder = joblib.load('model/Dosha/Dosha_LabelEncoder.pkl')
+# risk_encoder = joblib.load('model/Risk/Risk_LabelEncoder.pkl')
+# medicine_encoder = joblib.load('model/Medicine/Medicine_LabelEncoder.pkl')
 
 @main.route('/')
 def home():
@@ -70,79 +103,76 @@ def saveFeedback():
 
     return jsonify({'message': 'Feedback saved successfully.'}), 200
 
-@main.route('/predict', methods=['POST'])
-def getPredictions():
-    num_features = model.n_features_in_
+# @main.route('/predict', methods=['POST'])
+# def getPredictions():
+#     num_features = model.n_features_in_
+#     custom_array = np.zeros(num_features)
+#     symptom_ids = [int(x) for x in request.json['ids']]
+
+#     for id in symptom_ids:
+#         custom_array[id] = 1
+    
+#     prob = model.predict_proba([custom_array])[0]
+#     prediction_classes = model.classes_
+    
+#     threshold = 0.01
+#     predictions_with_prob = [{'disease': label, 'probability': float(probability)} for label, probability in zip(prediction_classes, prob) if probability > threshold]
+    
+#     predictions_with_prob = sorted(
+#         predictions_with_prob,
+#         key=lambda x: x['probability'],
+#         reverse=True
+#     )
+
+#     response = predictions_with_prob
+    
+#     return jsonify(response), 200
+
+
+# Route for Dosha Prediction
+@main.route('/predict/dosha', methods=['POST'])
+def predictDosha():
+    num_features = dosha_model.n_features_in_
     custom_array = np.zeros(num_features)
     symptom_ids = [int(x) for x in request.json['ids']]
 
     for id in symptom_ids:
         custom_array[id] = 1
-    
-    prob = model.predict_proba([custom_array])[0]
-    prediction_classes = model.classes_
-    
-    threshold = 0.01
-    predictions_with_prob = [{'disease': label, 'probability': float(probability)} for label, probability in zip(prediction_classes, prob) if probability > threshold]
-    
-    predictions_with_prob = sorted(
-        predictions_with_prob,
-        key=lambda x: x['probability'],
-        reverse=True
-    )
 
-    response = predictions_with_prob
-    
-    return jsonify(response), 200
+    # Make prediction and decode result
+    dosha_prediction = dosha_model.predict([custom_array])[0]
+    dosha_label = dosha_encoder.inverse_transform([dosha_prediction])[0]
 
-# Google maps API
-# def miles_to_meter(miles):
-#     try:
-#         return miles * 1_609.
-#     except:
-#         return 0
+    return jsonify({'dosha': dosha_label}), 200
 
-# load_dotenv()
+# Route for Risk Prediction
+@main.route('/predict/risk', methods=['POST'])
+def predictRisk():
+    num_features = risk_model.n_features_in_
+    custom_array = np.zeros(num_features)
+    symptom_ids = [int(x) for x in request.json['ids']]
 
-# MAPS_API_KEY = os.getenv('MAPS_API_KEY')
+    for id in symptom_ids:
+        custom_array[id] = 1
 
-# map_client = googlemaps.Client(key=MAPS_API_KEY)
+    # Make prediction and decode result
+    risk_prediction = risk_model.predict([custom_array])[0]
+    risk_label = risk_encoder.inverse_transform([risk_prediction])[0]
 
-# @app.route('/medicalcenters', methods=['POST'])
-# def getNearbyMedicalCenters():
-#     request_data = request.get_json()
+    return jsonify({'risk': risk_label}), 200
 
-#     if 'lat' and 'lng' in request_data:
-#         lat = request_data.get('lat')
-#         lng = request_data.get('lng')
-#         location = {'lat': lat, 'lng': lng}
-#         search_string = 'ayurveda'
-#         distance = miles_to_meter(10)
-#         medical_centers = []
+# Route for Medicine Prediction
+@main.route('/predict/medicine', methods=['POST'])
+def predictMedicine():
+    num_features = medicine_model.n_features_in_
+    custom_array = np.zeros(num_features)
+    symptom_ids = [int(x) for x in request.json['ids']]
 
-#         response = map_client.places_nearby(
-#             location=location,
-#             keyword=search_string,
-#             radius=distance
-#         )
+    for id in symptom_ids:
+        custom_array[id] = 1
 
-#         for place in response.get('results', []):
-#             # Get the first photo reference if available
-#             photo_reference = place.get('photos', [{}])[0].get('photo_reference', '')
+    # Make prediction and decode result
+    medicine_prediction = medicine_model.predict([custom_array])[0]
+    medicine_label = medicine_encoder.inverse_transform([medicine_prediction])[0]
 
-#             # Build the photo URL using the first photo reference
-#             photo_url = ''
-#             if photo_reference:
-#                 photo_url = f'https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference={photo_reference}&key={MAPS_API_KEY}'
-
-            
-#             medical_centers.append({
-#                 'name': place['name'],
-#                 'address': place.get('vicinity', ''),
-#                 'icon': photo_url,
-#                 'url': f"https://www.google.com/maps/place/?q=place_id:{place['place_id']}"
-#             })
-
-#         return jsonify(medical_centers)
-#     return jsonify({'message': 'Please provide valid request body.'}), 400
-
+    return jsonify({'medicine': medicine_label}), 200
