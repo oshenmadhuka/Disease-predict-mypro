@@ -8,5 +8,4 @@ def create_app():
     # Register the routes blueprint
     from .routes import main  # Ensure that the relative import uses ".routes"
     app.register_blueprint(main)
-
     return app
