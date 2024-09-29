@@ -22,22 +22,26 @@ main = Blueprint('main', __name__)
 dosha_model_path = os.path.join(os.path.dirname(__file__), '../model/Dosha/Dosha_Prediction_Model.pkl')
 risk_model_path = os.path.join(os.path.dirname(__file__), '../model/Risk/Risk_Prediction_Model.pkl')
 medicine_model_path = os.path.join(os.path.dirname(__file__), '../model/Medicine/Medicine_Prediction_Model.pkl')
+prognosis_model_path = os.path.join(os.path.dirname(__file__), '../model/Prognosis/Prognosis_Prediction_Model.pkl')
 
 # Load models
 # model = joblib.load(model_path)
 dosha_model = joblib.load(dosha_model_path)
 risk_model = joblib.load(risk_model_path)
 medicine_model = joblib.load(medicine_model_path)
+prognosis_model = joblib.load(prognosis_model_path)
 
 # Construct encoder paths
 dosha_encoder_path = os.path.join(os.path.dirname(__file__), '../model/Dosha/Dosha_LabelEncoder.pkl')
 risk_encoder_path = os.path.join(os.path.dirname(__file__), '../model/Risk/Risk_LabelEncoder.pkl')
 medicine_encoder_path = os.path.join(os.path.dirname(__file__), '../model/Medicine/Medicine_LabelEncoder.pkl')
+prognosis_encoder_path = os.path.join(os.path.dirname(__file__), '../model/Prognosis/Prognosis_LabelEncoder.pkl')
 
 # Load encoders if needed
 dosha_encoder = joblib.load(dosha_encoder_path)
 risk_encoder = joblib.load(risk_encoder_path)
 medicine_encoder = joblib.load(medicine_encoder_path)
+prognosis_encoder = joblib.load(prognosis_encoder_path)
 
 
 
@@ -128,6 +132,27 @@ def saveFeedback():
     
 #     return jsonify(response), 200
 
+# Route for Prognosis prediction
+@main.route('/predict/prognosis', methods=['POST'])
+def getPredictions():
+    # Get the number of features in the prognosis model
+    num_features = prognosis_model.n_features_in_
+    # Create a custom array with zeroes for the input
+    custom_array = np.zeros(num_features)
+
+    # Extract symptom ids from the POST request and set corresponding indices to 1
+    symptom_ids = [int(x) for x in request.json['ids']]
+    for id in symptom_ids:
+        custom_array[id] = 1
+
+    # Make prediction using the prognosis model
+    prognosis_prediction = prognosis_model.predict([custom_array])[0]
+
+    # Decode the predicted prognosis using the label encoder
+    prognosis_label = prognosis_encoder.inverse_transform([prognosis_prediction])[0]
+
+    # Return the decoded prognosis label
+    return jsonify({'prognosis': prognosis_label}), 200
 
 # Route for Dosha Prediction
 @main.route('/predict/dosha', methods=['POST'])
